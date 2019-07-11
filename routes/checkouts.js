@@ -32,7 +32,7 @@ router.post("/", function(req, res){
 
 // CHECKOUT GET - Get a single checkout
 router.get("/:checkoutId", function(req, res){
-    db.Checkout.findById(req.params.checkoutId)
+    db.Checkout.findOne({_id: req.params.checkoutId})
     .then(function(foundCheckout){
         res.json(foundCheckout);
     })
@@ -43,7 +43,12 @@ router.get("/:checkoutId", function(req, res){
 
 // CHECKOUT UPDATE - Update a checkout
 router.put("/:checkoutId", function(req, res){
-    db.Checkout.findOneAndUpdate({_id: req.params.checkoutId}, req.body, {new: true}) // {new: true} respond with updated data
+    var updatedCheckout = req.body;
+    if(updatedCheckout.returnDate) {
+        updatedCheckout.returnDate = Date(updatedCheckout.returnDate);
+    }
+
+    db.Checkout.findOneAndUpdate({_id: req.params.checkoutId}, req.body, {upsert: true}) // {new: true} respond with updated data
     .then(function(checkout){
         res.json(checkout);
     })

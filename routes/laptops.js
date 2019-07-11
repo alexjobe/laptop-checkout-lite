@@ -20,13 +20,15 @@ router.get("/", function(req, res){
 
 // LAPTOP CREATE - Add new laptop to database
 router.post("/", function(req, res){
-    
-    var newLaptop = db.Laptop.create({
-        name: req.body.name,
-        serialNum: Number(req.body.serialNum),
-        isCheckedOut: Boolean(req.body.isCheckedOut),
-        currentCheckout: req.body.currentCheckout
-    });
+
+    var newLaptop = req.body;
+    if(newLaptop.serialNum) { newLaptop.serialNum = Number(newLaptop.serialNum); }
+    if(newLaptop.isCheckedOut) {
+        if(newLaptop.isCheckedOut == 'true') {newLaptop.isCheckedOut = true}
+        else {newLaptop.isCheckedOut = false}
+    }
+
+    newLaptop = db.Laptop.create(newLaptop);
 
     newLaptop.save()
     .then(function(newLaptop){
@@ -49,12 +51,10 @@ router.get("/:laptopId", function(req, res){
     });
 });
 
-// --------------------------------------------------------------------- //
-
 // LAPTOP GET HISTORY - Get a laptop's history
 router.get("/:laptopId/history", function(req, res){
     // Mongo populates currentCheckout based on ObjectID
-    db.Laptop.findById(req.params.laptopId).populate('checkoutHistory')
+    db.Laptop.findOne({_id: req.params.laptopId}, {populate: ['checkoutHistory']})
     .then(function(laptop){
         res.send(laptop.checkoutHistory);
     })
@@ -66,9 +66,16 @@ router.get("/:laptopId/history", function(req, res){
 // LAPTOP UPDATE HISTORY - Update a laptop's history
 router.put("/:laptopId/history", function(req, res){
     // Mongo populates currentCheckout based on ObjectID
-    db.Laptop.findOneAndUpdate({_id: req.params.laptopId}, req.body, {new: true})
+    var updatedHistory = [];
+    req.body.checkoutHistory.forEach(function(checkout){
+        if(checkout._id != null){
+            updatedHistory.push({_id: checkout._id})
+        }
+    });
+
+    db.Laptop.findOne({_id: req.params.laptopId}, {upsert: true,})
     .then(function(laptop){
-        laptop.checkoutHistory = req.body.checkoutHistory;
+        laptop.checkoutHistory = updatedHistory;
         laptop.save();
         res.json(laptop);
     })
@@ -80,7 +87,14 @@ router.put("/:laptopId/history", function(req, res){
 // LAPTOP UPDATE - Update a laptop
 router.put("/:laptopId", function(req, res){
     // Mongo populates currentCheckout based on ObjectID
-    db.Laptop.findOneAndUpdate({_id: req.params.laptopId}, req.body, {new: true}).populate('currentCheckout') // {new: true} respond with updated data
+    var updatedLaptop = req.body;
+    if(updatedLaptop.serialNum) { updatedLaptop.serialNum = Number(updatedLaptop.serialNum); }
+    if(updatedLaptop.isCheckedOut) {
+        if(updatedLaptop.isCheckedOut == 'true') {updatedLaptop.isCheckedOut = true}
+        else {updatedLaptop.isCheckedOut = false}
+    }
+
+    db.Laptop.findOneAndUpdate({_id: req.params.laptopId}, updatedLaptop, {upsert: true}) // {new: true} respond with updated data
     .then(function(laptop){
         if(req.body.currentCheckout) { // If there is a currentCheckout, set isCheckedOut to true
             laptop.isCheckedOut = true;
@@ -102,9 +116,11 @@ router.put("/:laptopId", function(req, res){
 // LAPTOP DELETE - Delete a laptop
 router.delete("/:laptopId", function(req, res){
 
-    db.Laptop.findById(req.params.laptopId)
+    db.Laptop.findOne({_id: req.params.laptopId})
     .then(function(foundLaptop){
-        return db.Checkout.deleteMany({'_id':{'$in':foundLaptop.checkoutHistory}}); // Delete all checkouts associated with this laptop
+        return foundLaptop.checkoutHistory.forEach(function(checkout){
+            db.Checkout.deleteOne({_id: checkout._id});
+        });
     })
     .then(function(){
         return db.Laptop.deleteOne({_id: req.params.laptopId});
@@ -112,9 +128,6 @@ router.delete("/:laptopId", function(req, res){
     .then(function(){
         res.json({message: 'Deletion success'});
     })
-    .catch(function(err){
-        res.send(err);
-    });
 });
 
 module.exports = router;
