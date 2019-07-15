@@ -63,26 +63,29 @@ router.get("/:laptopId/history", function(req, res){
     });
 });
 
-// LAPTOP UPDATE HISTORY - Update a laptop's history
-router.put("/:laptopId/history", function(req, res){
-    // Mongo populates currentCheckout based on ObjectID
-    var updatedHistory = [];
-    req.body.checkoutHistory.forEach(function(checkout){
-        if(checkout._id != null){
-            updatedHistory.push({_id: checkout._id})
-        }
-    });
-
-    db.Laptop.findOne({_id: req.params.laptopId}, {upsert: true,})
+// LAPTOP HISTORY DELETE - Delete a checkout from laptop's history
+router.delete("/:laptopId/history/:checkoutId", function(req, res){
+    db.Laptop.findOne({_id: req.params.laptopId}, {populate: ['checkoutHistory']})
     .then(function(laptop){
+        return laptop;
+    })
+    .then(function(laptop){
+        var updatedHistory = [db.Checkout];
+        updatedHistory = laptop.checkoutHistory.filter(function(checkout) {
+            if(checkout._id == req.params.checkoutId) {
+                return false;
+            }
+            else { return true; }
+        });
         laptop.checkoutHistory = updatedHistory;
         laptop.save();
-        res.json(laptop);
+        res.json({message: 'Deletion success'});
     })
     .catch(function(err){
         res.send(err);
     });
 });
+
 
 // LAPTOP UPDATE - Update a laptop
 router.put("/:laptopId", function(req, res){
