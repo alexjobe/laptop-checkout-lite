@@ -41,7 +41,7 @@ router.post("/", function(req, res){
 
 // LAPTOP GET - Get a single laptop
 router.get("/:laptopId", function(req, res){
-    // Mongo populates currentCheckout based on ObjectID
+    // NeDB populates currentCheckout based on ObjectID
     db.Laptop.findOne({_id: req.params.laptopId}, {populate: ['currentCheckout']})
     .then(function(foundLaptop){
         res.json(foundLaptop);
@@ -53,7 +53,7 @@ router.get("/:laptopId", function(req, res){
 
 // LAPTOP GET HISTORY - Get a laptop's history
 router.get("/:laptopId/history", function(req, res){
-    // Mongo populates currentCheckout based on ObjectID
+    // NeDB populates currentCheckout based on ObjectID
     db.Laptop.findOne({_id: req.params.laptopId}, {populate: ['checkoutHistory']})
     .then(function(laptop){
         res.send(laptop.checkoutHistory);
@@ -89,7 +89,6 @@ router.delete("/:laptopId/history/:checkoutId", function(req, res){
 
 // LAPTOP UPDATE - Update a laptop
 router.put("/:laptopId", function(req, res){
-    // Mongo populates currentCheckout based on ObjectID
     var updatedLaptop = req.body;
     if(updatedLaptop.serialNum) { updatedLaptop.serialNum = Number(updatedLaptop.serialNum); }
     if(updatedLaptop.isCheckedOut) {
