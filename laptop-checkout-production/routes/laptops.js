@@ -88,12 +88,16 @@ router.put("/:laptopId", function(req, res){
     db.Laptop.findOne({_id: req.params.laptopId}, {populate: ['currentCheckout', 'checkoutHistory']})
     .then(function(laptop){
         if(req.body.currentCheckout) { // If there is a currentCheckout, set isCheckedOut to true
+            laptop.name = req.body.name;
+            laptop.serialCode = req.body.serialCode;
             laptop.isCheckedOut = true;
             laptop.currentCheckout = db.Checkout.create({...req.body.currentCheckout});
             laptop.checkoutHistory.push(laptop.currentCheckout); // Add checkout to checkoutHistory array
             laptop.save(); // Save the laptop because we updated checkoutHistory
         }
         else if(req.body.currentCheckout == null) { // If currentCheckout is null, set isCheckedOut to false
+            laptop.name = req.body.name;
+            laptop.serialCode = req.body.serialCode;
             laptop.currentCheckout = null;
             laptop.isCheckedOut = false;
             laptop.save();
